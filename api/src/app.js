@@ -10,7 +10,6 @@ import {
 
 export const init = () => {
   //global middlewares
-
   app.use(cors({ origin: '*' }));
   app.use(json());
   app.use(urlencoded({ extended: true }));
