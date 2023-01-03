@@ -1,49 +1,43 @@
-import { model, Schema } from 'mongoose';
-import uniqueValidator from 'mongoose-unique-validator';
+const mongoose = require('mongoose');
 
-const UserSchema = new Schema(
-  {
-    firstName: {
-      type: String,
-      required: true,
-    },
-    lastName: {
-      type: String,
-      required: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      lowercase: true,
-    },
-    password: {
-      type: String,
-      required: true,
-    },
-    confirmPassword:{
-      type: String,
-      required: true,
-    },
-    address: {
-      type: String,
-    },
-    country: {
-      type: String,
-    },
-    state: {
-      type: String,
-    },
-    city: {
-      type: String,
-    },
-    zip: {
-      type: String,
-    },
+const UserSchema = new mongoose.Schema({
+  firstName: {
+    type: String,
+    required: true,
+  },  
+  lastName: {
+    type: String,
+    required: true,
   },
-  {
-    timestamps: true,
-  }
-);
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+  address: {
+    type: String,
+    required: true,
+  },
+  state: {
+    type: String,
+    required: true,
+  },
+  city: {
+    type: String,
+    required: true,
+  },
+  zip: {
+    type: String,
+    required: true,
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false,
+  },
+});
 
-UserSchema.plugin(uniqueValidator);
-export const UserModel = model('users', UserSchema);
+module.exports = mongoose.model('users', UserSchema);
