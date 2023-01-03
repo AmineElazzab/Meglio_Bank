@@ -1,9 +1,8 @@
-import { Router } from 'express';
-import { Login, Register } from '../controllers/authController';
+const express = require('express');
+const router = express();
+const { Register, Login} = require("../controllers/authController");
 
-const router = Router();
+router.post("/register", Register);
+router.post("/login", Login);
 
-router.post('/login', Login);
-router.post('/create-user', Register);
-
-export { router as UsersRoutes };
+module.exports = router;
