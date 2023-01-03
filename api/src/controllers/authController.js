@@ -1,93 +1,111 @@
-import { UserModel } from '../models';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
-dotenv.config();
+// user controller
 
-// login user
-export const Login = async (req, res) => {
-  try {
-    const existingUser = await UserModel.findOne({
-      email: req.body.email,
-    });
-    if (!existingUser) {
-      return res.status(400).send({
-        message: 'User does not exist',
-        success: false,
-        data: null,
-      });
-    }
-    const isPasswordCorrect = await bcrypt.compare(
-      req.body.password,
-      existingUser.password
-    );
-    if (!isPasswordCorrect) {
-      return res.status(400).send({
-        message: 'Incorrect password',
-        success: false,
-        data: null,
-      });
-    }
-    const token = jwt.sign(
-      { userId: existingUser._id },
-      process.env.TOKEN_SECRET,
-      {
-        expiresIn: '1h',
-      }
-    );
-    res.status(200).send({
-      message: 'User logged in successfully',
-      success: true,
-      token: token,
-      user: existingUser,
-    });
-  } catch (error) {
-    res.status(500).send({
-      message: error.message,
-      success: false,
-      data: null,
-    });
-  }
-};
+const User = require("../models/UserModel");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 // register user
-export const Register = async (req, res) => {
-  try {
-    const existingUser = await UserModel.findOne({
-      email: req.body.email,
-    });
-    if (existingUser) {
-      return res.status(400).send({
-        message: 'User already exists',
-        success: false,
-        data: null,
-      });
-    }
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
-    const user = new UserModel({
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      email: req.body.email,
-      password: hashedPassword,
-      confirmPassword: hashedPassword,
-      address: req.body.address,
-      country: req.body.country,
-      state: req.body.state,
-      city: req.body.city,
-      zip: req.body.zip,
-    });
-    const savedUser = await user.save();
-    res.send({
-      message: 'User created successfully',
-      status: true,
-      data: savedUser,
-    });
-  } catch (error) {
-    res.send({
-      message: error.message,
-      status: false,
-      data: null,
+const Register = async (req, res) => {
+  const { firstName, lastName, email, password, address, state, city, zip } =
+    req.body;
+
+  if (!firstName
+    || !lastName
+    || !email
+    || !password
+    || !address
+    || !state
+    || !city
+    || !zip) {
+    return res.status(400).json({ msg: 'Please enter all fields' });
+  }
+
+  //check if user already exists
+  const UserExists = await User.findOne({ email });
+  if (UserExists) {
+    return res.status(400).json({ msg: 'User already exists' });
+  }
+
+  // password hach
+  const salt = await bcrypt.genSalt(10);
+  const hash = await bcrypt.hash(password, salt);
+
+  // create new user
+  const newUser = new User({
+    firstName,
+    lastName,
+    email,
+    password: hash,
+    address,
+    state,
+    city,
+    zip,
+  });
+      if(newUser) {
+        res.status(201).json({
+          _id: newUser._id,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          email: newUser.email,
+          address: newUser.address,
+          state: newUser.state,
+          city: newUser.city,
+          zip: newUser.zip,
+          token: generateToken(newUser._id),
+        });
+      } else {
+        res.status(400);
+        throw new Error('Invalid user data');
+      }
+};
+
+
+// login user
+const Login = async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ msg: 'Please enter all fields' });
+  }
+
+  //check if user already exists
+  const newUser = await User.findOne({email});
+  if (!newUser) {
+    return res.status(400).json({ msg: 'User does not exist' });
+  }
+
+  // password hach
+  const isMatch = await bcrypt.compare(password, newUser.password); 
+  if (!isMatch) {
+    return res.status(400).json({ msg: 'Password Not Corect' });
+  }
+
+  
+  if(newUser && isMatch) {
+    res.status(201).json({
+      _id: newUser._id,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      email: newUser.email,
+      address: newUser.address,
+      state: newUser.state,
+      city: newUser.city,
+      zip: newUser.zip,
+      token: generateToken(newUser._id),
     });
   }
+
 };
+
+// generate token
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: '30d',
+  });
+}
+
+module.exports = {
+  Register,
+  Login,
+};
+     
