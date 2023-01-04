@@ -4,7 +4,7 @@ const colors = require('colors');
 require("dotenv").config();
 const PORT = process.env.PORT || 5000;
 const conectDB = require("./src/config/db");
-const {errorHandler} = require("./src/middleware/errorHandler");
+const { errorHandler } = require("./src/middleware/errorHandler");
 
 const app = express();
 app.use(cors());
@@ -16,11 +16,12 @@ conectDB();
 // routes
 
 app.use("/api/users", require("./src/routes/UsersRoutes"));
+app.use("/api/admin", require("./src/routes/AdminRoutes"));
 
 // error handler
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`.yellow.bold);
-    }
+    console.log(`Server is running on port ${PORT}`.green.bold);
+}
 );
