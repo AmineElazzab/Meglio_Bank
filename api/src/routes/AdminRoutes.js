@@ -1,11 +1,9 @@
-import { Router } from 'express';
-import { registerAdmin, loginAdmin, getAllUsers, getAdminById } from '../controllers/adminController';
+const express = require('express');
+const router = express();
+const {RegisterAdmin, LoginAdmin, GetAllUsers} = require("../controllers/adminController");
 
-const router = Router();
+router.post("/register", RegisterAdmin);
+router.post("/login", LoginAdmin);
+router.get("/users", GetAllUsers);
 
-router.post('/login-admin', loginAdmin);
-router.post('/create-admin', registerAdmin);
-router.get('/get-all-users', getAllUsers);
-router.get('/:admin_id', getAdminById);
-
-export { router as AdminRoutes };
+module.exports = router;
