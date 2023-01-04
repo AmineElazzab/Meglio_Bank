@@ -1,122 +1,111 @@
-import { AdminModel } from '../models';
-import { UserModel } from '../models';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
-dotenv.config();
-
-// login admin
-export const loginAdmin = async (req, res) => {
-  try {
-    const existingAdmin = await AdminModel.findOne({
-      email: req.body.email,
-    });
-    if (!existingAdmin) {
-      return res.status(400).send({
-        message: 'Admin does not exist',
-        success: false,
-        data: null,
-      });
-    }
-    const isPasswordCorrect = await bcrypt.compare(
-      req.body.password,
-      existingAdmin.password
-    );
-    if (!isPasswordCorrect) {
-      return res.status(400).send({
-        message: 'Incorrect password',
-        success: false,
-        data: null,
-      });
-    }
-    const token = jwt.sign(
-      { adminId: existingAdmin._id },
-      process.env.TOKEN_SECRET_ADMIN,
-      {
-        expiresIn: '1h',
-      }
-    );
-    res.status(200).send({
-      message: 'Admin logged in successfully',
-      success: true,
-      token: token,
-      admin: existingAdmin,
-    });
-  } catch (error) {
-    res.status(500).send({
-      message: error.message,
-      success: false,
-      data: null,
-    });
-  }
-};
+const Admin = require("../models/AdminModel");
+const User = require("../models/UserModel");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 // register admin
-export const registerAdmin = async (req, res) => {
-  try {
-    const existingAdmin = await AdminModel.findOne({
-      email: req.body.email,
+const RegisterAdmin = async (req, res) => {
+  const { FullName, email, password } = req.body;
+
+  if (!FullName || !email || !password) {
+    return res.status(400).json({ msg: 'Please enter all fields' });
+  }
+
+  //check if admin already exists
+  const AdminExists = await Admin.findOne({ email });
+  if (AdminExists) {
+    return res.status(400).json({ msg: 'Admin already exists' });
+  }
+
+  // password hach
+  const salt = await bcrypt.genSalt(10);
+  const hash = await bcrypt.hash(password, salt);
+
+  // create new admin
+  const newAdmin = new Admin({
+    FullName,
+    email,
+    password: hash,
+  });
+  if (newAdmin) {
+    res.status(201).json({
+      _id: newAdmin._id,
+      FullName: newAdmin.FullName,
+      email: newAdmin.email,
+      token: generateToken(newAdmin._id),
     });
-    if (existingAdmin) {
-      return res.status(400).send({
-        message: 'Admin already exists',
-        success: false,
-        data: null,
-      });
-    }
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
-    const admin = new AdminModel({
-      email: req.body.email,
-      password: hashedPassword,
-      name: req.body.name,
-    });
-    const savedAdmin = await admin.save();
-    res.send({
-      message: 'User created successfully',
-      status: true,
-      data: savedAdmin,
-    });
-  } catch (error) {
-    res.send({
-      message: error.message,
-      status: false,
-      data: null,
-    });
+  } else {
+    res.status(400);
+    throw new Error('Invalid admin data');
   }
 };
 
-// get admin by id
-export const getAdminById = async (req, res) => {
-  try {
-    const admin = await AdminModel.findById(req.params.admin_id);
-    res.status(200).send({
-      message: 'Admin fetched successfully',
-      success: true,
-      data: admin,
-    });
-  } catch (error) {
-    res.status(500).send({
-      message: error.message,
-      success: false,
-      data: null,
-    });
+// login admin
+const LoginAdmin = async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ msg: 'Please enter all fields' });
+  }
+
+  const admin = await Admin.findOne({ email });
+  if (!admin) {
+    return res.status(400).json({ msg: 'Admin does not exist' });
+  }
+
+  const isMatch = await bcrypt.compare(password, admin.password);
+  if (!isMatch) {
+    return res.status(400).json({ msg: 'Invalid credentials' });
+  }
+
+  res.json({
+    _id: admin._id,
+    FullName: admin.FullName,
+    email: admin.email,
+    token: generateToken(admin._id),
+  });
+};
+
+// generate token
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.TOKEN_SECRET_ADMIN, { expiresIn: '1h' });
+}
+
+
+//get all users
+const GetAllUsers = async (req, res) => {
+  const users = await User.find({});
+  res.send(users);
+};
+
+//get user by id
+const GetUserById = async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (user) {
+    res.send(user);
+  } else {
+    res.status(404).send({ message: 'User Not Found.' });
   }
 };
 
-export const getAllUsers = async (req, res) => {
-  try {
-    const users = await UserModel.find();
-    res.status(200).send({
-      message: 'All users fetched successfully',
-      success: true,
-      data: users,
-    });
-  } catch (error) {
-    res.status(400).send({
-      message: error.message,
-      success: false,
-      data: null,
-    });
+//delete user by id
+const DeleteUserById = async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (user) {
+    await user.remove();
+    res.send({ message: 'User Deleted' });
+  } else {
+    res.status(404).send({ message: 'User Not Found' });
   }
+};
+
+
+
+
+module.exports = {
+  RegisterAdmin,
+  LoginAdmin,
+  GetAllUsers,
+  GetUserById,
+  DeleteUserById,
 };
