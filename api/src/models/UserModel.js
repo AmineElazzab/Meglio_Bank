@@ -1,47 +1,57 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const UserSchema = new mongoose.Schema({
-  firstName: {
-    type: String,
-    required: true,
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, "Please add a name"],
+    },
+    email: {
+      type: String,
+      required: [true, "Please add an email"],
+      lowercase: true,
+      unique: true,
+    },
+    password: {
+      type: String,
+      required: [true, "Please add a password"],
+    },
+    confirmPassword: {
+      type: String,
+    },
+    address: {
+      type: String,
+      required: [true, "Please add an address"],
+    },
+    city: {
+      type: String,
+      required: [true, "Please add a city"],
+    },
+    postalCode: {
+      type: String,
+      required: [true, "Please add a postal code"],
+    },
+    phone: {
+      type: String,
+      required: [true, "Please add a phone number"],
+    },
+    birthday: {
+      type: Date,
+      required: [true, "Please add a birthday"],
+    },
+    gender: {
+      type: String,
+      enum: ["Male" , "Female"],
+      required: [true, "Please add a Gender"],
+    },
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    },
   },
-  lastName: {
-    type: String,
-    required: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  password: {
-    type: String,
-    required: true,
-  },
-  address: {
-    type: String,
-    required: true,
-  },
-  state: {
-    type: String,
-    required: true,
-  },
-  city: {
-    type: String,
-    required: true,
-  },
-  zip: {
-    type: String,
-    required: true,
-  },
-  isAdmin: {
-    type: Boolean,
-    default: false,
-  },
-},
   {
     timestamps: true,
   }
 );
 
-module.exports = mongoose.model('user', UserSchema);
+module.exports = mongoose.model("users", userSchema);
