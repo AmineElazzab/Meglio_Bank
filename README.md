@@ -1,4 +1,4 @@
-# BankApp MERN Stack Application
+# MEGLIO-BANK MERN Stack Application
 
 ## About
 
