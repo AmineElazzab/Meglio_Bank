@@ -1,271 +1,116 @@
-const User = require("../models/UserModel");
+const User = require("../models/userModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const asyncHandler = require("express-async-handler");
 
-// register user
-// const Register = async (req, res) => {
-//   const { firstName, lastName, email, password, address, state, city, zip } =
-//     req.body;
-//   // console.log(req.body);
-//   if (!firstName
-//     || !lastName
-//     || !email
-//     || !password
-//     || !address
-//     || !state
-//     || !city
-//     || !zip) {
-//     return res.status(400).json({ msg: 'Please enter all fields' });
-//   }
+//REGISTER new user
+const CreateUser = asyncHandler(async (req, res) => {
+  const { name, email, password, confirmPassword, address, city, postalCode, phone, birthday, gender } = req.body;
 
-//   //check if user already exists
-//   const UserExists = await User.findOne({ email });
-//   if (UserExists) {
-//     return res.status(400).json({ msg: 'User already exists' });
-//   }
-//   // console.log(UserExists);
-//   const salt = await bcrypt.genSalt(10);
-//   const hash = await bcrypt.hash(password, salt);
-
-//   // create new user
-//   const newUser = new User({
-//     firstName,
-//     lastName,
-//     email,
-//     password: hash,
-//     address,
-//     state,
-//     city,
-//     zip,
-//   });
-//   console.log(newUser)
-//   if (newUser) {
-//     res.status(201).json({
-//       _id: newUser._id,
-//       firstName: newUser.firstName,
-//       lastName: newUser.lastName,
-//       email: newUser.email,
-//       address: newUser.address,
-//       state: newUser.state,
-//       city: newUser.city,
-//       zip: newUser.zip,
-//       token: generateToken(newUser._id),
-//     });
-//   } else {
-//     res.status(400);
-//     throw new Error('Invalid user data');
-//   }
-// };
-
-// Create User
-const Register = async (req, res) => {
-  const { firstName, lastName, email, password, address, state, city, zip } =
-    req.body;
-
-  if (!firstName
-    || !lastName
-    || !email
-    || !password
-    || !address
-    || !state
-    || !city
-    || !zip) {
-    return res.status(400).json({ msg: 'Please enter all fields' });
+  if (!name || !email || !password
+    || !confirmPassword || !address || !city || !postalCode || !phone
+    || !birthday
+    || !gender) {
+    res.status(400);
+    throw new Error("Please add all fields");
   }
 
-  //check if user already exists
-  const UserExists = await User.findOne
-    ({
-      email
-    });
-  if (UserExists) {
-    return res.status(400).json({ msg: 'User already exists' });
+  //check if user exists
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    res.status(400);
+    throw new Error("User already exists");
   }
 
+  //Hash password
   const salt = await bcrypt.genSalt(10);
-  const hash = await bcrypt.hash(password, salt);
+  const hashedPassword = await bcrypt.hash(password, salt);
 
-  // create new user
-  const newUser = await User.create({
-    firstName,
-    lastName,
+  //Create User
+  const user = await User.create({
+    name,
     email,
-    password: hash,
+    password: hashedPassword,
+    confirmPassword: hashedPassword,
     address,
-    state,
     city,
-    zip,
+    postalCode,
+    phone,
+    birthday,
+    gender,
   });
 
-  if (newUser) {
+  if (user) {
     res.status(201).json({
-      _id: newUser._id,
-      firstName: newUser.firstName,
-      lastName: newUser.lastName,
-      email: newUser.email,
-      address: newUser.address,
-      state: newUser.state,
-      city: newUser.city,
-      zip: newUser.zip,
-      token: generateToken(newUser._id),
+      _id: user.id,
+      name: user.name,
+      email: user.email,
+      address: user.address,
+      city: user.city,
+      postalCode: user.postalCode,
+      phone: user.phone,
+      birthday: user.birthday,
+      gender: user.gender,
+      createdAt: user.createdAt,
+      token: generateToken(user._id),
+      message: "Your account has been created successfully",
     });
   } else {
     res.status(400);
-    throw new Error('Invalid user data');
+    throw new Error("Invalid user data");
   }
-};
+});
 
-
-// login user
-const Login = async (req, res) => {
+// LOGIN a user
+const LoginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ msg: 'Please enter all fields' });
+  //Check for user email
+  const user = await User.findOne({ email });
+  if (!user) {
+    res.status(400);
+    throw new Error("User does not exist");
   }
 
-  //check if user already exists
-  const newUser = await User.findOne({ email });
-  if (!newUser) {
-    return res.status(400).json({ msg: 'User does not exist' });
-  }
-  const isMatch = await bcrypt.compare(password, newUser.password);
-  if (!isMatch) {
-    return res.status(400).json({ msg: 'Password Not Corect' });
+  //check for password match
+  const isPasswordCorrect = await bcrypt.compare(password, user.password);
+  if (!isPasswordCorrect) {
+    res.status(400);
+    throw new Error("Incorrect password");
   }
 
-
-  if (newUser && isMatch) {
-    res.status(201).json({
-      _id: newUser._id,
-      firstName: newUser.firstName,
-      lastName: newUser.lastName,
-      email: newUser.email,
-      address: newUser.address,
-      state: newUser.state,
-      city: newUser.city,
-      zip: newUser.zip,
-      token: generateToken(newUser._id),
+  if (user && (await bcrypt.compare(password, user.password))) {
+    res.json({
+      _id: user.id,
+      name: user.name,
+      email: user.email,
+      address: user.address,
+      city: user.city,
+      postalCode: user.postalCode,
+      phone: user.phone,
+      birthday: user.birthday,
+      gender: user.gender,
+      isAdmin: user.isAdmin,
+      createdAt: user.createdAt,
+      token: generateToken(user._id),
+      message: "You have successfully logged in",
     });
+  } else {
+    res.status(400);
+    throw new Error("Invalid credentials");
   }
+});
 
-};
+// GET USER BY ID
+const GetUserById = asyncHandler(async (req, res) => {
+  res.status(200).json(req.user);
+});
 
-// generate token
+//Generate JWT token
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
+  return jwt.sign({ id }, process.env.jwt_secret, {
+    expiresIn: "1h",
   });
-}
-
-// Get All Users
-const GetAllUsers = async (req, res) => {
-  try {
-    const users = await User.find({});
-    res.status(200).send({
-      success: true,
-      message: 'All Users',
-      data: users,
-    });
-  } catch (error) {
-    res.status(500).send({
-      success: false,
-      message: 'Server Error',
-      error: error.message,
-    });
-  }
-}
-
-
-// Get User by ID
-const GetUserById = async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) {
-      return res.status(404).send({
-        success: false,
-        message: 'User not found',
-      });
-    }
-    res.status(200).send({
-      success: true,
-      message: 'User found',
-      data: user,
-    });
-  } catch (error) {
-    res.status(500).send({
-      success: false,
-      message: 'Server Error',
-      error: error.message,
-    });
-  }
-}
-
-//Update User by ID
-const UpdateUser = async (req, res) => {
-  try {
-    const { email, address, state, city, zip } = req.body;
-    const user = await User.findByIdAndUpdate(req.params.id,{
-        email,
-        address,
-        state,
-        city,
-        zip,
-      },
-      { new: true }
-      );
-      console.log(user)
-    if (!user) {
-      return res.status(404).send({
-        success: false,
-        message: 'User not found',
-      });
-    }
-    res.status(200).send({
-      success: true,
-      message: 'User updated successfully',
-      data: user,
-    });
-  } catch (error) {
-    res.status(500).send({
-      success: false,
-      message: 'Server Error',
-      error: error.message,
-    });
-  }
 };
 
-
-//Delete User by ID
-const DeleteUser = async (req, res) => {
-  try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) {
-      return res.status(404).send({
-        success: false,
-        message: 'User not found',
-      });
-    }
-    res.status(200).send({
-      success: true,
-      message: 'User deleted successfully',
-    });
-  } catch (error) {
-    res.status(500).send({
-      success: false,
-      message: 'Server Error',
-      error: error.message,
-    });
-  }
-};
-
-
-
-module.exports = {
-  Register,
-  Login,
-  GetAllUsers,
-  GetUserById,
-  UpdateUser,
-  DeleteUser,
-};
+module.exports = { CreateUser, LoginUser, GetUserById };
